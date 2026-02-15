@@ -1,0 +1,69 @@
+{
+    "mp1": {
+        "name": "МПП ДДИИ (пример калибровки v in list)",
+        "calibrate_mode": true,
+        "modbus_settings": {
+            "id": 14,
+            "bodrate": 125000,
+            "com": "COM5"
+        },
+        "measure_settings": {
+            "convince_mode": {
+                "vg_lst": [0,1,2],
+                "step_delay_s": 0.1
+            }
+        },
+        "current_limit": 0.01,
+        "loop": false,
+        "save_table": false,
+        "save_plot": false
+    },
+    "mp2": {
+        "name": "МПП ДДИИ (пример калибровки v linspace)",
+        "calibrate_mode": true,
+        "modbus_settings": {
+            "id": 14,
+            "bodrate": 125000,
+            "com": "COM5"
+        },
+        "measure_settings": {
+            "linspace_mode": {
+                "vg_start": 0,
+                "vg_stop": 2.5,
+                "vg_step": 20,
+                "step_delay_s": 0.1
+            }
+        },
+        "current_limit": 0.01,
+        "loop": false,
+        "save_table": false,
+        "save_plot": false
+    },
+    "mp3": {
+        "calibrate_mode": false,
+        "name": "МПП ДДИИ (пример калибровки v const)",
+        "measure_settings": {
+            "const_mode": {
+                "vg_cnst": 0
+            }
+        },
+        "current_limit": 0.01,
+        "loop": false,
+        "save_table": false,
+        "save_plot": false
+    },
+    "mp4": {
+        "calibrate_mode": false,
+        "name": "МПП ДДИИ (loop mode)",
+        "measure_settings": {
+            "convince_mode": {
+                "vg_lst": [0,1,2],
+                "step_delay_s": 0.1
+            }
+        },
+        "current_limit": 0.01,
+        "loop": true,
+        "save_table": false,
+        "save_plot": false
+    }
+}

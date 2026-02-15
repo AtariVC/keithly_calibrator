@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: keithly-calibrator
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: async>=0.6.2
+Requires-Dist: keithley2600>=2.1.0
+Requires-Dist: loguru>=0.7.3
+Requires-Dist: numpy>=2.3.3
+Requires-Dist: pandas>=2.3.3
+Requires-Dist: pydantic>=2.12.5
+Requires-Dist: pyinstaller>=6.18.0
+Requires-Dist: pymodbus==3.6.8
+Requires-Dist: pyqt6>=6.9.1
+Requires-Dist: pyqtgraph>=0.13.7
+Requires-Dist: pyserial>=3.5
+Requires-Dist: qasync>=0.28.0
+Requires-Dist: qtmodern>=0.2.0
+Dynamic: license-file

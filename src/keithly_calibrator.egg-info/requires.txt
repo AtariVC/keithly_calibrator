@@ -1,0 +1,13 @@
+async>=0.6.2
+keithley2600>=2.1.0
+loguru>=0.7.3
+numpy>=2.3.3
+pandas>=2.3.3
+pydantic>=2.12.5
+pyinstaller>=6.18.0
+pymodbus==3.6.8
+pyqt6>=6.9.1
+pyqtgraph>=0.13.7
+pyserial>=3.5
+qasync>=0.28.0
+qtmodern>=0.2.0
