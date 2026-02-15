@@ -8,6 +8,7 @@
             "com": "COM5"
         },
         "measure_settings": {
+            "acq_channel": 1,
             "convince_mode": {
                 "vg_lst": [0,1,2],
                 "step_delay_s": 0.1
@@ -15,8 +16,8 @@
         },
         "current_limit": 0.01,
         "loop": false,
-        "save_table": false,
-        "save_plot": false
+        "save_table": true,
+        "save_plot": true
     },
     "mp2": {
         "name": "МПП ДДИИ (пример калибровки v linspace)",
@@ -27,6 +28,7 @@
             "com": "COM5"
         },
         "measure_settings": {
+            "acq_channel": 2,
             "linspace_mode": {
                 "vg_start": 0,
                 "vg_stop": 2.5,
@@ -36,26 +38,28 @@
         },
         "current_limit": 0.01,
         "loop": false,
-        "save_table": false,
-        "save_plot": false
+        "save_table": true,
+        "save_plot": true
     },
     "mp3": {
         "calibrate_mode": false,
         "name": "МПП ДДИИ (пример калибровки v const)",
         "measure_settings": {
+            "acq_channel": 1,
             "const_mode": {
                 "vg_cnst": 0
             }
         },
         "current_limit": 0.01,
         "loop": false,
-        "save_table": false,
-        "save_plot": false
+        "save_table": true,
+        "save_plot": true
     },
     "mp4": {
         "calibrate_mode": false,
         "name": "МПП ДДИИ (loop mode)",
         "measure_settings": {
+            "acq_channel": 1,
             "convince_mode": {
                 "vg_lst": [0,1,2],
                 "step_delay_s": 0.1
@@ -63,7 +67,7 @@
         },
         "current_limit": 0.01,
         "loop": true,
-        "save_table": false,
-        "save_plot": false
+        "save_table": true,
+        "save_plot": true
     }
 }

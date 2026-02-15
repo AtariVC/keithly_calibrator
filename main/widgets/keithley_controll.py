@@ -205,7 +205,12 @@ class KeithleyControl(QtWidgets.QWidget):
     async def _mpp_get_lvl(self) -> int:
         try:
             mpp_ch = 0 if self.comboBox_mpp_ch.currentIndex() == 0 else 1
-            output: bytes = self.mpp_cmd.start_measure_forced(mpp_ch)
+            await self.mpp_cmd.start_measure_forced(mpp_ch)
+            output: bytes = (
+                await self.mpp_cmd.get_acq1_peak()
+                if mpp_ch == 0
+                else await self.mpp_cmd.get_acq2_peak()
+            )
             zero_lvl: int = max(self.parser.mpp_pars_16b(output))
             return zero_lvl + 20
         except Exception as e:
@@ -276,7 +281,7 @@ class KeithleyControl(QtWidgets.QWidget):
                 if not await self._ensure_connected():
                     return
                 self._set_running_state(True)
-                self.mpp_lvl = self._mpp_get_lvl()
+                self.mpp_lvl = await self._mpp_get_lvl()
                 self.task_manager.create_task(self._run_sequence(), "keithley_task")
             finally:
                 self._set_search_state(False)
