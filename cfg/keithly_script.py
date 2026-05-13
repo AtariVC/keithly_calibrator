@@ -45,7 +45,7 @@ class MeasureSettings(BaseModel):
     convince_mode: ConvinceMode | None = None
     linspace_mode: LinspaceMode | None = None
     const_mode: ConstMode | None = None
-    acq_channel: Literal[1, 2] = 1
+    acq_channel_reg: int = 7 # регистр для чтения ACQPeak 
 
     @model_validator(mode="after")
     def validate_single_mode(self) -> "MeasureSettings":
@@ -163,7 +163,7 @@ class MeasureProcessing:
             raise RuntimeError("Keithley is not connected")
 
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.output_dir = Path("measure") / ts
+        self.output_dir = Path("measure") / f"{ts}--{self.mp_model["name"]}"
         logger.info(f"Measure output dir: {self.output_dir}")
 
         try:
@@ -200,7 +200,7 @@ class MeasureProcessing:
             "voltage_v",
             "value",
             "mode",
-            "acq_channel",
+            "acq_channel_reg",
         ]
 
         logger.info(f"Process started: {proc_key} ({process.name})")
@@ -234,7 +234,7 @@ class MeasureProcessing:
                             "voltage_v": f"{voltage:.6f}",
                             "value": f"{value:.12g}",
                             "mode": mode,
-                            "acq_channel": process.measure_settings.acq_channel,
+                            "acq_channel_reg": process.measure_settings.acq_channel_reg,
                         }
                         writer.writerow(row)
                         csv_file.flush()
@@ -268,17 +268,16 @@ class MeasureProcessing:
             raise RuntimeError("Modbus client is not connected")
 
         mpp_cmd = MPP_Commands(self.mb_client, logger, process.modbus_settings.id)
-        channel_index = int(process.measure_settings.acq_channel - 1)
+        ACQ_reg = int(process.measure_settings.acq_channel_reg)
 
-        await mpp_cmd.start_measure_forced(channel_index)
+        await mpp_cmd.start_measure_forced(ch = 1)
+        await mpp_cmd.start_measure_forced(ch = 2)
         await self._keithley_set_voltage(voltage)
         if delay_s > 0:
             await asyncio.sleep(delay_s)
 
         raw = (
-            await mpp_cmd.get_acq1_peak()
-            if process.measure_settings.acq_channel == 1
-            else await mpp_cmd.get_acq2_peak()
+            await mpp_cmd.get_acq_peak(ACQ_reg)
         )
         return float(self._extract_u16_value(raw))
 
@@ -411,7 +410,7 @@ class MeasureProcessing:
 if __name__ == "__main__":
     address = "10.6.1.222"
     logger = log_init()
-    json_conf = Path(__file__).with_name("cvc_sipm_50mk.json")
+    json_conf = Path(__file__).with_name("mpp_ddii_calib_ch1.json")
 
     try:
         k: Keithley2600 | None = Keithley2600(f"TCPIP0::{address}::INSTR")  # type: ignore

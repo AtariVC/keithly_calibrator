@@ -1,6 +1,6 @@
 {
     "mp1": {
-        "name": "МПП ДДИИ №8 (ЛО28)",
+        "name": "Калибровка МПП ДДИИ №8 (ЛО28) Канал 2",
         "calibrate_mode": true,
         "modbus_settings": {
             "id": 14,
@@ -8,7 +8,7 @@
             "com": "COM5"
         },
         "measure_settings": {
-            "acq_channel": 1,
+            "acq_channel_reg": 9,
             "linspace_mode": {
                 "vg_start": 0,
                 "vg_stop": 5,

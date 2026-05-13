@@ -1,0 +1,24 @@
+{
+    "mp1": {
+        "name": "Калибровка МПП ДДИИ №8 (ЛО28) Канал 1",
+        "calibrate_mode": true,
+        "modbus_settings": {
+            "id": 14,
+            "bodrate": 125000,
+            "com": "COM5"
+        },
+        "measure_settings": {
+            "acq_channel_reg": 8,
+            "linspace_mode": {
+                "vg_start": 0,
+                "vg_stop": 5,
+                "vg_step": 20,
+                "step_delay_s": 1
+            }
+        },
+        "current_limit": 0.01,
+        "loop": false,
+        "save_table": true,
+        "save_plot": true
+    }
+}

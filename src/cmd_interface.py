@@ -114,6 +114,10 @@ class MPP_Commands:
     @mb_decorator()
     async def get_acq1_peak(self) -> bytes:
         return await self._read(MPP_REG.ACQ1_PEAK, 1)
+    
+    @mb_decorator()
+    async def get_acq_peak(self, acq_reg: int) -> bytes:
+        return await self._read(acq_reg, 1)
 
     @mb_decorator()
     async def get_acq2_peak(self) -> bytes:
