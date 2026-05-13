@@ -5,7 +5,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, Literal, Callable
+from typing import Any, Dict, Iterator, Literal, Callable, Protocol
 
 from loguru import logger
 from pydantic import BaseModel, model_validator, ImportString, field_validator
@@ -24,6 +24,20 @@ sys.path.append(str(src_path))
 from src.async_task_manager import AsyncTaskManager
 from src.cmd_interface import MPP_Commands
 from src.log_config import log_init
+
+
+class RealtimePlotter(Protocol):
+    async def update(self, voltage: float, value: float) -> None:
+        ...
+
+    async def update_calibration_fit(self, a: float | None, b: float | None) -> None:
+        ...
+
+    def save_png(self, file_path: Path) -> None:
+        ...
+
+    def close(self) -> None:
+        ...
 
 
 class ConvinceMode(BaseModel):
@@ -164,9 +178,11 @@ class MeasureProcessing:
         self,
         k: Keithley2600 | None = None,
         mb_client: AsyncModbusSerialClient | None = None,
+        plotter_factory: Callable[[str, str, str], RealtimePlotter] | None = None,
     ) -> None:
         self.k = k
         self.mb_client = mb_client
+        self.plotter_factory = plotter_factory
         self.mp_model: Dict[str, MPModel] = {}
         self.task_manager = AsyncTaskManager()
         self._active_modbus_fp: tuple[str, int, float] | None = None
@@ -214,8 +230,8 @@ class MeasureProcessing:
 
     async def _run_single_process(self, proc_key: str, process: MPModel) -> None:
         await self._prepare_keithley_source(current_limit=process.current_limit)
-        plotter = MatplotlibRealtimePlot(f"{proc_key}: {process.name}",
-                                         process.x_name, process.y_name)
+        plotter_factory = self.plotter_factory or MatplotlibRealtimePlot
+        plotter = plotter_factory(f"{proc_key}: {process.name}", process.x_name, process.y_name)
         safe_name = self._sanitize_filename(process.name)
         csv_path = self.output_dir / f"{safe_name}.csv"
         png_path = self.output_dir / f"{safe_name}.png"
