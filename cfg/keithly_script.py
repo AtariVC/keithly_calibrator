@@ -193,15 +193,8 @@ class MeasureProcessing:
         png_path = self.output_dir / f"{safe_name}.png"
 
         fieldnames = [
-            "timestamp",
-            "process_key",
-            "process_name",
-            "cycle",
-            "step",
             "voltage_v",
             "value",
-            "mode",
-            "acq_channel_reg",
         ]
 
         logger.info(f"Process started: {proc_key} ({process.name})")
@@ -227,15 +220,8 @@ class MeasureProcessing:
                         voltage = process.x_func(voltage, value)
                         value = process.y_func(voltage, value)
                         row = {
-                            "timestamp": datetime.now().isoformat(timespec="seconds"),
-                            "process_key": proc_key,
-                            "process_name": process.name,
-                            "cycle": cycle,
-                            "step": step_idx,
                             "voltage_v": f"{voltage:.6f}",
                             "value": f"{value:.12g}",
-                            "mode": mode,
-                            "acq_channel_reg": process.measure_settings.acq_channel_reg,
                         }
                         writer.writerow(row)
                         csv_file.flush()
