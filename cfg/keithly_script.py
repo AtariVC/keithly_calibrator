@@ -163,7 +163,8 @@ class MeasureProcessing:
             raise RuntimeError("Keithley is not connected")
 
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.output_dir = Path("measure") / f"{ts}--{self.mp_model['name']}"
+        output_name = next(iter(self.mp_model.values())).name if len(self.mp_model) == 1 else "measure"
+        self.output_dir = Path("measure") / f"{ts}--{self._sanitize_filename(output_name)}"
         logger.info(f"Measure output dir: {self.output_dir}")
 
         try:
