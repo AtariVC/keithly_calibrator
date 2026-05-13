@@ -13,6 +13,7 @@ from pymodbus.client import AsyncModbusSerialClient
 
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from keithley2600 import Keithley2600
 
@@ -76,6 +77,7 @@ class MPModel(BaseModel):
     loop: bool
     save_table: bool
     save_plot: bool
+    show_calibration_fit: bool = False
     x_func: Callable = lambda x, y: x
     y_func: Callable = lambda x, y: y
     x_name: str = "Voltage, V"
@@ -104,6 +106,15 @@ class MatplotlibRealtimePlot:
         plt.ion()
         self.fig, self.ax = plt.subplots(num=title)
         self.line, = self.ax.plot([], [], marker="o")
+        self.fit_line, = self.ax.plot([], [], linestyle="--", color="tab:red")
+        self.fit_text = self.ax.text(
+            0.02,
+            0.98,
+            "",
+            transform=self.ax.transAxes,
+            va="top",
+            bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
+        )
         self.ax.set_title(title)
         self.ax.set_xlabel(x_name)
         self.ax.set_ylabel(y_name)
@@ -117,6 +128,23 @@ class MatplotlibRealtimePlot:
         self._x.append(float(voltage))
         self._y.append(float(value))
         self.line.set_data(self._x, self._y)
+        self.ax.relim()
+        self.ax.autoscale_view()
+        self.fig.canvas.draw_idle()
+        self.fig.canvas.flush_events()
+        await asyncio.sleep(0)
+
+    async def update_calibration_fit(self, a: float | None, b: float | None) -> None:
+        if a is None or b is None or len(self._x) < 2:
+            self.fit_line.set_data([], [])
+            self.fit_text.set_text("")
+        else:
+            x_min = min(self._x)
+            x_max = max(self._x)
+            fit_x = [x_min, x_max]
+            fit_y = [a * x_min + b, a * x_max + b]
+            self.fit_line.set_data(fit_x, fit_y)
+            self.fit_text.set_text(f"y = {a:.6f}x {b:+.6f}")
         self.ax.relim()
         self.ax.autoscale_view()
         self.fig.canvas.draw_idle()
@@ -196,10 +224,15 @@ class MeasureProcessing:
             "voltage_v",
             "value",
         ]
+        show_calibration_fit = process.calibrate_mode and process.show_calibration_fit
+        if show_calibration_fit:
+            fieldnames.extend(["a", "b"])
 
         logger.info(f"Process started: {proc_key} ({process.name})")
         step_idx = 0
         cycle = 0
+        measured_x: list[float] = []
+        measured_y: list[float] = []
 
         try:
             with csv_path.open("w", newline="", encoding="utf-8") as csv_file:
@@ -219,13 +252,21 @@ class MeasureProcessing:
                             mode = "keithley_current_a"
                         voltage = process.x_func(voltage, value)
                         value = process.y_func(voltage, value)
+                        measured_x.append(float(voltage))
+                        measured_y.append(float(value))
+                        a, b = self._linear_fit(measured_x, measured_y) if show_calibration_fit else (None, None)
                         row = {
                             "voltage_v": f"{voltage:.6f}",
                             "value": f"{value:.12g}",
                         }
+                        if show_calibration_fit:
+                            row["a"] = f"{a:.6f}" if a is not None else ""
+                            row["b"] = f"{b:.6f}" if b is not None else ""
                         writer.writerow(row)
                         csv_file.flush()
                         await plotter.update(voltage, value)
+                        if show_calibration_fit:
+                            await plotter.update_calibration_fit(a, b)
                         step_idx += 1
 
                     cycle += 1
@@ -392,6 +433,13 @@ class MeasureProcessing:
         normalized = re.sub(r"[^\w\-.()]+", "_", normalized)
         normalized = normalized.strip("._")
         return normalized or "measure"
+
+    @staticmethod
+    def _linear_fit(x_values: list[float], y_values: list[float]) -> tuple[float | None, float | None]:
+        if len(x_values) < 2 or len(set(x_values)) < 2:
+            return None, None
+        a, b = np.polyfit(x_values, y_values, 1)
+        return float(a), float(b)
 
 
 if __name__ == "__main__":
