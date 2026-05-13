@@ -1,0 +1,22 @@
+{
+    "mp1": {
+        "name": "CVC_SIPM7",
+        "output_dir": "CVC_SIPM",
+        "calibrate_mode": false,
+        "measure_settings": {
+            "linspace_mode": {
+                "vg_start": 26,
+                "vg_stop": 31,
+                "vg_step": 40,
+                "step_delay_s": 0.01
+            }
+        },
+        "current_limit": 0.01,
+        "loop": false,
+        "save_table": true,
+        "save_plot": true,
+        "y_name": "Current, A", 
+        "x_func": "lambda x, y: x-y*10**6",
+        "y_func": "lambda x, y: y"
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "mp1": {
+        "calibrate_mode": false,
+        "name": "МПП ДДИИ (loop mode)",
+        "measure_settings": {
+            "acq_channel": 1,
+            "convince_mode": {
+                "vg_lst": [0,1],
+                "step_delay_s": 0.3
+            }
+        },
+        "current_limit": 0.01,
+        "loop": true,
+        "save_table": true,
+        "save_plot": true
+    }
+}

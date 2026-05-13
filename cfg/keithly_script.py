@@ -5,10 +5,10 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, Literal
+from typing import Any, Dict, Iterator, Literal, Callable
 
 from loguru import logger
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, ImportString, field_validator
 from pymodbus.client import AsyncModbusSerialClient
 
 
@@ -68,6 +68,7 @@ class ModBusSettings(BaseModel):
 
 class MPModel(BaseModel):
     name: str
+    output_dir: str|None = None
     calibrate_mode: bool
     modbus_settings: ModBusSettings | None = None
     measure_settings: MeasureSettings
@@ -75,6 +76,23 @@ class MPModel(BaseModel):
     loop: bool
     save_table: bool
     save_plot: bool
+    x_func: Callable = lambda x, y: x
+    y_func: Callable = lambda x, y: y
+    x_name: str = "Voltage, V"
+    y_name: str = "Measured value"
+
+    @field_validator(*('x_func',"y_func"), mode='before')
+    @classmethod
+    def convert_str_to_lambda(cls, v):
+        # Если пришла строка, пытаемся преобразовать её в lambda
+        if isinstance(v, str):
+            try:
+                # ВАЖНО: eval() может быть небезопасен. 
+                # Используйте только с доверенными данными.
+                return eval(v)
+            except Exception as e:
+                raise ValueError(f"Не удалось преобразовать строку в функцию: {e}")
+        return v
 
     @classmethod
     def pydentic_model_init(cls, data: dict) -> Dict[str, "MPModel"]:
@@ -82,13 +100,13 @@ class MPModel(BaseModel):
 
 
 class MatplotlibRealtimePlot:
-    def __init__(self, title: str) -> None:
+    def __init__(self, title: str, x_name: str, y_name: str) -> None:
         plt.ion()
         self.fig, self.ax = plt.subplots(num=title)
         self.line, = self.ax.plot([], [], marker="o")
         self.ax.set_title(title)
-        self.ax.set_xlabel("Voltage, V")
-        self.ax.set_ylabel("Measured value")
+        self.ax.set_xlabel(x_name)
+        self.ax.set_ylabel(y_name)
         self.ax.grid(True, alpha=0.3)
         self._x: list[float] = []
         self._y: list[float] = []
@@ -122,7 +140,7 @@ class MeasureProcessing:
         self.k = k
         self.mb_client = mb_client
         self.mp_model: Dict[str, MPModel] = {}
-        self.task_manager = AsyncTaskManager(logger)
+        self.task_manager = AsyncTaskManager()
         self._active_modbus_fp: tuple[str, int, float] | None = None
         self.output_dir: Path = Path("measure")
 
@@ -146,11 +164,16 @@ class MeasureProcessing:
 
         ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.output_dir = Path("measure") / ts
-        self.output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Measure output dir: {self.output_dir}")
 
         try:
             for proc_key, process in self.mp_model.items():
+                # Для каждого mp можно создать кастомный output_dir
+                if process.output_dir:
+                    self.output_dir = Path("measure") / process.output_dir
+                    self.output_dir.mkdir(parents=True, exist_ok=True)
+                else:
+                    self.output_dir.mkdir(parents=True, exist_ok=True)
                 task_name = f"measure_{proc_key}"
                 self.task_manager.create_task(self._run_single_process(proc_key, process), task_name)
                 task = self.task_manager.tasks.get(task_name)
@@ -162,7 +185,8 @@ class MeasureProcessing:
 
     async def _run_single_process(self, proc_key: str, process: MPModel) -> None:
         await self._prepare_keithley_source(current_limit=process.current_limit)
-        plotter = MatplotlibRealtimePlot(title=f"{proc_key}: {process.name}")
+        plotter = MatplotlibRealtimePlot(f"{proc_key}: {process.name}",
+                                         process.x_name, process.y_name)
         safe_name = self._sanitize_filename(process.name)
         csv_path = self.output_dir / f"{safe_name}.csv"
         png_path = self.output_dir / f"{safe_name}.png"
@@ -199,7 +223,8 @@ class MeasureProcessing:
                         else:
                             value = await self._measure_keithley_current_point(voltage, delay_s)
                             mode = "keithley_current_a"
-
+                        voltage = process.x_func(voltage, value)
+                        value = process.y_func(voltage, value)
                         row = {
                             "timestamp": datetime.now().isoformat(timespec="seconds"),
                             "process_key": proc_key,
@@ -386,11 +411,11 @@ class MeasureProcessing:
 if __name__ == "__main__":
     address = "10.6.1.222"
     logger = log_init()
-    json_conf = Path(__file__).with_name("keithly_script.json")
+    json_conf = Path(__file__).with_name("cvc_sipm_50mk.json")
 
     try:
         k: Keithley2600 | None = Keithley2600(f"TCPIP0::{address}::INSTR")  # type: ignore
-        logger.debug(f"Connected: TCPIP0::{address}::INSTR")
+        # logger.debug(f"Connected: TCPIP0::{address}::INSTR")
     except Exception as exc:
         k = None
         logger.error(f"Error connection keithley: {exc}")

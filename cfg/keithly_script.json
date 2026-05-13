@@ -5,7 +5,7 @@
         "modbus_settings": {
             "id": 14,
             "bodrate": 125000,
-            "com": "COM5"
+            "com": "COM25"
         },
         "measure_settings": {
             "acq_channel": 1,
@@ -25,7 +25,7 @@
         "modbus_settings": {
             "id": 14,
             "bodrate": 125000,
-            "com": "COM5"
+            "com": "COM25"
         },
         "measure_settings": {
             "acq_channel": 2,

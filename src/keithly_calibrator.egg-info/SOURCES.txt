@@ -1,8 +1,15 @@
 LICENSE
 pyproject.toml
+src/__init__.py
+src/async_task_manager.py
 src/cmd_interface.py
-src/env_var.py
+src/craft_custom_widget.py
+src/device_registers.py
+src/log_config.py
+src/main_window_maker.py
+src/modbus_worker.py
 src/pars_util.py
+src/plot_renderer.py
 src/serial_interface.py
 src/keithly_calibrator.egg-info/PKG-INFO
 src/keithly_calibrator.egg-info/SOURCES.txt
