@@ -100,7 +100,7 @@ class KeithleyControl(QtWidgets.QWidget):
         loadUi(Path(__file__).parent.joinpath("keithley_controll.ui"), self)
         self.logger = log_init()
         self.parent = args[0]
-        self.task_manager = AsyncTaskManager(self.logger)
+        self.task_manager = AsyncTaskManager()
         self.device = Keithley2600Client()
         self._running = False
         self.graph_widget: GraphWidget = self.parent.w_graph_widget  # type: ignore

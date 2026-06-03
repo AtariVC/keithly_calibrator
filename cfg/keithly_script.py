@@ -94,8 +94,8 @@ class MPModel(BaseModel):
     show_calibration_fit: bool = False
     x_func: Callable = lambda x, y: x
     y_func: Callable = lambda x, y: y
-    x_name: str = "Voltage, V"
-    y_name: str = "Measured value"
+    x_name: str = "ед. ацп"
+    y_name: str = "V, В"
 
     @field_validator(*('x_func',"y_func"), mode='before')
     @classmethod
@@ -266,10 +266,10 @@ class MeasureProcessing:
                         else:
                             value = await self._measure_keithley_current_point(voltage, delay_s)
                             mode = "keithley_current_a"
-                        voltage = process.x_func(voltage, value)
-                        value = process.y_func(voltage, value)
-                        measured_x.append(float(voltage))
-                        measured_y.append(float(value))
+                        value = process.x_func(value, voltage)
+                        voltage = process.y_func(value, voltage)
+                        measured_x.append(float(value))
+                        measured_y.append(float(voltage))
                         a, b = self._linear_fit(measured_x, measured_y) if show_calibration_fit else (None, None)
                         row = {
                             "voltage_v": f"{voltage:.6f}",
@@ -280,7 +280,7 @@ class MeasureProcessing:
                             row["b"] = f"{b:.6f}" if b is not None else ""
                         writer.writerow(row)
                         csv_file.flush()
-                        await plotter.update(voltage, value)
+                        await plotter.update(value, voltage)
                         if show_calibration_fit:
                             await plotter.update_calibration_fit(a, b)
                         step_idx += 1
@@ -459,9 +459,9 @@ class MeasureProcessing:
 
 
 if __name__ == "__main__":
-    address = "10.6.1.222"
+    address = "10.6.1.229"
     logger = log_init()
-    json_conf = Path(__file__).with_name("mpp_ddii_calib_ch1.json")
+    json_conf = Path(__file__).with_name("mpp_mpp6_calib.json")
 
     try:
         k: Keithley2600 | None = Keithley2600(f"TCPIP0::{address}::INSTR")  # type: ignore
