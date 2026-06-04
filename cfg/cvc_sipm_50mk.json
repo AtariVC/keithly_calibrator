@@ -1,22 +1,23 @@
 {
     "mp1": {
-        "name": "CVC_SIPM7",
-        "output_dir": "CVC_SIPM",
+        "name": "ВАХ_SIPM8",
+        "output_dir": "ВАХ_SIPM8",
         "calibrate_mode": false,
         "measure_settings": {
             "linspace_mode": {
                 "vg_start": 23,
                 "vg_stop": 25.7,
                 "vg_step": 40,
-                "step_delay_s": 0.01
+                "step_delay_s": 0.1
             }
         },
         "current_limit": 0.01,
         "loop": false,
         "save_table": true,
         "save_plot": true,
-        "y_name": "Current, A", 
-        "x_func": "lambda x, y: x-y*10**6",
-        "y_func": "lambda x, y: y"
+        "x_name": "U, В", 
+        "y_name": "I, нA",
+        "x_func": "lambda x, y: y",
+        "y_func": "lambda x, y: x*10**9"
     }
 }

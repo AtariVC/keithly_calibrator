@@ -146,7 +146,6 @@ class MatplotlibRealtimePlot:
         self.ax.autoscale_view()
         self.fig.canvas.draw_idle()
         self.fig.canvas.flush_events()
-        await asyncio.sleep(0)
 
     async def update_calibration_fit(self, a: float | None, b: float | None) -> None:
         if a is None or b is None or len(self._x) < 2:
@@ -265,22 +264,21 @@ class MeasureProcessing:
                             mode = "modbus_peak"
                         else:
                             value = await self._measure_keithley_current_point(voltage, delay_s)
-                            mode = "keithley_current_a"
-                        value = process.x_func(value, voltage)
-                        voltage = process.y_func(value, voltage)
-                        measured_x.append(float(value))
-                        measured_y.append(float(voltage))
+                        value_f = process.x_func(value, voltage)
+                        voltage_f = process.y_func(value, voltage)
+                        measured_x.append(float(value_f))
+                        measured_y.append(float(voltage_f))
                         a, b = self._linear_fit(measured_x, measured_y) if show_calibration_fit else (None, None)
                         row = {
-                            "voltage_v": f"{voltage:.6f}",
-                            "value": f"{value:.12g}",
+                            "voltage_v": f"{voltage_f:.6f}",
+                            "value": f"{value_f:.12g}",
                         }
                         if show_calibration_fit:
                             row["a"] = f"{a:.6f}" if a is not None else ""
                             row["b"] = f"{b:.6f}" if b is not None else ""
                         writer.writerow(row)
                         csv_file.flush()
-                        await plotter.update(value, voltage)
+                        await plotter.update(value_f, voltage_f)
                         if show_calibration_fit:
                             await plotter.update_calibration_fit(a, b)
                         step_idx += 1
@@ -461,7 +459,7 @@ class MeasureProcessing:
 if __name__ == "__main__":
     address = "10.6.1.229"
     logger = log_init()
-    json_conf = Path(__file__).with_name("mpp_mpp6_calib.json")
+    json_conf = Path(__file__).with_name("cvc_sipm_15mk.json")
 
     try:
         k: Keithley2600 | None = Keithley2600(f"TCPIP0::{address}::INSTR")  # type: ignore
