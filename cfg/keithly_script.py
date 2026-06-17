@@ -324,7 +324,7 @@ class MeasureProcessing:
         out_data = self._extract_u16_value(raw)
         if out_data >= 4094:
             await self._keithley_set_voltage(0)
-            raise ValueError(f"The calibration range has been exceeded: {out_data:.0f} > 4094")
+            raise ValueError(f"The calibration range has been exceeded at {voltage:.3f} V: {out_data:.0f} lsb >= 4094 lsb")
         return self._extract_u16_value(raw)
 
     async def _measure_keithley_current_point(self, voltage: float, delay_s: float) -> float:
@@ -463,7 +463,7 @@ class MeasureProcessing:
 if __name__ == "__main__":
     address = "10.6.1.229"
     logger = log_init()
-    json_conf = Path(__file__).with_name("cvc_sipm_15mk.json")
+    json_conf = Path(__file__).with_name("mpp_drp_calib_ch1.json")
 
     try:
         k: Keithley2600 | None = Keithley2600(f"TCPIP0::{address}::INSTR")  # type: ignore
@@ -480,4 +480,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.warning("Measure interrupted by user")
     except Exception as exc:
-        logger.error(exc)
+        # logger.error(exc)
+        pass
