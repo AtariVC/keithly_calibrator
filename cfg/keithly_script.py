@@ -321,7 +321,11 @@ class MeasureProcessing:
         raw = (
             await mpp_cmd.get_acq_peak(ACQ_reg)
         )
-        return float(self._extract_u16_value(raw))
+        out_data = self._extract_u16_value(raw)
+        if out_data >= 4094:
+            await self._keithley_set_voltage(0)
+            raise ValueError(f"The calibration range has been exceeded: {out_data:.0f} > 4094")
+        return self._extract_u16_value(raw)
 
     async def _measure_keithley_current_point(self, voltage: float, delay_s: float) -> float:
         await self._keithley_set_voltage(voltage)
@@ -430,7 +434,7 @@ class MeasureProcessing:
         self._active_modbus_fp = None
 
     @staticmethod
-    def _extract_u16_value(raw: bytes) -> int:
+    def _extract_u16_value(raw: bytes) -> float:
         if not raw:
             raise RuntimeError("Empty Modbus response")
         payload = raw
@@ -439,7 +443,7 @@ class MeasureProcessing:
         if len(payload) < 2:
             raise RuntimeError(f"Unexpected Modbus payload: {raw.hex()}")
         regs = [int.from_bytes(payload[i : i + 2], byteorder="big") for i in range(0, len(payload), 2)]
-        return int(regs[-1])
+        return float(regs[-1])
 
     @staticmethod
     def _sanitize_filename(name: str) -> str:

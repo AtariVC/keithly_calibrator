@@ -1,7 +1,7 @@
 {
     "mp1": {
-        "name": "ВАХ_SIPM8",
-        "output_dir": "ВАХ_SIPM8",
+        "name": "ВАХ_SIPM01",
+        "output_dir": "ВАХ_SIPM01",
         "calibrate_mode": false,
         "measure_settings": {
             "linspace_mode": {
