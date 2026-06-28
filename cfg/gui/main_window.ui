@@ -30,42 +30,38 @@
      <widget class="QWidget" name="rightPanel">
       <layout class="QVBoxLayout" name="rightPanelLayout">
        <item>
-        <widget class="QLineEdit" name="jsonFileLineEdit">
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-         <property name="placeholderText">
-          <string>JSON-файл не выбран</string>
-         </property>
+        <widget class="QWidget" name="jsonFileRow">
+         <layout class="QHBoxLayout" name="jsonFileRowLayout">
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QLineEdit" name="jsonFileLineEdit">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>JSON-файл не выбран</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="jsonButtonLayout">
-         <item>
-          <widget class="QPushButton" name="selectJsonButton">
-           <property name="text">
-            <string>Выбрать JSON</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="editJsonButton">
-           <property name="text">
-            <string>Открыть в редакторе</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="reloadJsonButton">
-           <property name="text">
-            <string>Обновить JSON</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QFrame" name="jsonDropArea">
+        <widget class="QPlainTextEdit" name="jsonEditorWidget">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -75,60 +71,9 @@
          <property name="acceptDrops">
           <bool>true</bool>
          </property>
-         <property name="styleSheet">
-          <string notr="true">QFrame#jsonDropArea {
-    border: 2px dashed #8a98a8;
-    border-radius: 8px;
-    background: #2b2b2b;
-}
-QFrame#jsonDropArea QLabel {
-    color: #d7dce2;
-}</string>
+         <property name="placeholderText">
+          <string>Перетащите сюда .json файл</string>
          </property>
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Plain</enum>
-         </property>
-         <layout class="QVBoxLayout" name="jsonDropAreaLayout">
-          <item>
-           <spacer name="jsonDropTopSpacer">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QLabel" name="jsonDropAreaLabel">
-            <property name="text">
-             <string>Перетащите сюда .json файл</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="jsonDropBottomSpacer">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
         </widget>
        </item>
        <item>

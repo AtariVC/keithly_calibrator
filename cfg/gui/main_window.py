@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -14,6 +15,7 @@ import qasync
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PyQt6 import QtCore, QtWidgets, uic
+from PyQt6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPT_DIR) not in sys.path:
@@ -22,12 +24,61 @@ if str(SCRIPT_DIR) not in sys.path:
 from keithley2600 import Keithley2600
 from keithly_script import MeasureProcessing
 
+from qcustomwidgets.widgets.button import Button
+from qcustomwidgets.resources.compile_icons import svg_path
 
 DEFAULT_KEITHLEY_ADDRESS = "10.6.1.222"
 PLOT_BG = "#2b2b2b"
 PLOT_AXES_BG = "#242424"
 PLOT_TEXT = "#d7dce2"
 PLOT_GRID = "#6c737d"
+
+_SVG = svg_path()
+
+
+class JsonHighlighter(QSyntaxHighlighter):
+    _RE_KEY = re.compile(r'("(?:[^"\\]|\\.)*")\s*:')
+    _RE_STR = re.compile(r'"(?:[^"\\]|\\.)*"')
+    _RE_NUM = re.compile(r'(?<!["\w])-?\b\d+(?:\.\d*)?(?:[eE][+-]?\d+)?\b')
+    _RE_KW = re.compile(r'\b(true|false|null)\b')
+    _RE_PUNCT = re.compile(r'[{}\[\],:]')
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._key_fmt = self._fmt("#9cdcfe")
+        self._str_fmt = self._fmt("#ce9178")
+        self._num_fmt = self._fmt("#b5cea8")
+        self._kw_fmt = self._fmt("#569cd6")
+        self._punct_fmt = self._fmt("#808080")
+
+    @staticmethod
+    def _fmt(color: str) -> QTextCharFormat:
+        f = QTextCharFormat()
+        f.setForeground(QColor(color))
+        return f
+
+    def highlightBlock(self, text: str) -> None:
+        key_spans: list[tuple[int, int]] = []
+        for m in self._RE_KEY.finditer(text):
+            g = m.group(1)
+            s = m.start()
+            e = s + len(g)
+            self.setFormat(s, e - s, self._key_fmt)
+            key_spans.append((s, e))
+
+        for m in self._RE_STR.finditer(text):
+            s, e = m.start(), m.end()
+            if not any(ks <= s < ke for ks, ke in key_spans):
+                self.setFormat(s, e - s, self._str_fmt)
+
+        for m in self._RE_NUM.finditer(text):
+            self.setFormat(m.start(), m.end() - m.start(), self._num_fmt)
+
+        for m in self._RE_KW.finditer(text):
+            self.setFormat(m.start(), m.end() - m.start(), self._kw_fmt)
+
+        for m in self._RE_PUNCT.finditer(text):
+            self.setFormat(m.start(), 1, self._punct_fmt)
 
 
 def style_axes(ax: Any, title: str | None = None, x_name: str = "Voltage, V", y_name: str = "Measured value") -> None:
@@ -52,12 +103,9 @@ class GuiRealtimePlotter:
         self.line, = self.ax.plot([], [], marker="o", color="#4da3ff")
         self.fit_line, = self.ax.plot([], [], linestyle="--", color="#ff6b6b")
         self.fit_text = self.ax.text(
-            0.02,
-            0.98,
-            "",
+            0.02, 0.98, "",
             transform=self.ax.transAxes,
-            va="top",
-            color=PLOT_TEXT,
+            va="top", color=PLOT_TEXT,
             bbox={"boxstyle": "round", "facecolor": PLOT_AXES_BG, "edgecolor": PLOT_GRID, "alpha": 0.9},
         )
         style_axes(self.ax, title, x_name, y_name)
@@ -109,11 +157,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.keithleyIpLineEdit.setText(DEFAULT_KEITHLEY_ADDRESS)
         self.horizontalLayout.setStretch(0, 3)
         self.horizontalLayout.setStretch(1, 2)
-        self.rightPanelLayout.setStretch(2, 0)
-        self.rightPanelLayout.setStretch(4, 1)
+        self.rightPanelLayout.setStretch(1, 1)  # jsonEditorWidget expands
+        self.rightPanelLayout.setStretch(3, 1)  # logTextEdit expands
+
         self._setup_plot()
+        self._setup_json_panel()
         self._setup_signals()
-        self.jsonDropArea.installEventFilter(self)
 
     def _setup_plot(self) -> None:
         self.figure = Figure(figsize=(6, 4), tight_layout=True, facecolor=PLOT_BG)
@@ -124,24 +173,54 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotContainer.layout().addWidget(self.canvas)
         self.canvas.draw_idle()
 
+    def _setup_json_panel(self) -> None:
+        font = QFont("Menlo, Monaco, Courier New, monospace")
+        font.setPointSize(11)
+        self.jsonEditorWidget.setFont(font)
+        self.jsonEditorWidget.setStyleSheet(
+            "QPlainTextEdit {"
+            "  background-color: #1e1e1e;"
+            "  color: #d4d4d4;"
+            "  border: 1px solid #3c3c3c;"
+            "  border-radius: 4px;"
+            "}"
+        )
+        self._highlighter = JsonHighlighter(self.jsonEditorWidget.document())
+        self.jsonEditorWidget.installEventFilter(self)
+
+        layout: QtWidgets.QHBoxLayout = self.jsonFileRowLayout
+
+        def _btn(icon: str, tip: str) -> Button:
+            b = Button(icons=_SVG / icon, flat=True, tooltip=tip)
+            b.setFixedSize(28, 28)
+            layout.addWidget(b)
+            return b
+
+        self.selectJsonButton = _btn("folder-open.svg", "Выбрать JSON")
+        self.saveJsonButton = _btn("save.svg", "Сохранить JSON")
+        self.editJsonButton = _btn("editor.svg", "Открыть в редакторе")
+        self.reloadJsonButton = _btn("repeat.svg", "Перезагрузить JSON")
+
     def _setup_signals(self) -> None:
         self.selectJsonButton.clicked.connect(self.select_json_file)
+        self.saveJsonButton.clicked.connect(self.save_json_file)
         self.editJsonButton.clicked.connect(self.open_json_in_editor)
         self.reloadJsonButton.clicked.connect(self.reload_json)
         self.startStopButton.clicked.connect(self.on_start_stop_clicked)
         self.connectKeithleyButton.clicked.connect(self.connect_keithley_clicked)
 
     def eventFilter(self, obj: QtCore.QObject, event: QtCore.QEvent) -> bool:
-        if obj is self.jsonDropArea and event.type() == QtCore.QEvent.Type.DragEnter:
-            if self._event_has_json_file(event):
-                event.acceptProposedAction()
-                return True
-        if obj is self.jsonDropArea and event.type() == QtCore.QEvent.Type.Drop:
-            path = self._json_path_from_drop_event(event)
-            if path is not None:
-                self.load_json_file(path)
-                event.acceptProposedAction()
-                return True
+        if obj is self.jsonEditorWidget:
+            if event.type() == QtCore.QEvent.Type.DragEnter:
+                if self._event_has_json_file(event):
+                    event.acceptProposedAction()
+                    return True
+            if event.type() == QtCore.QEvent.Type.Drop:
+                path = self._json_path_from_drop_event(event)
+                if path is not None:
+                    self.load_json_file(path)
+                    event.acceptProposedAction()
+                    return True
         return super().eventFilter(obj, event)
 
     def _event_has_json_file(self, event: QtCore.QEvent) -> bool:
@@ -162,17 +241,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.logTextEdit.appendPlainText(f"[{ts}] {message}")
 
     def select_json_file(self) -> None:
-        import tkinter as tk
-        from tkinter import filedialog
-
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        file_name = filedialog.askopenfilename(
-            title="Выбрать JSON",
-            filetypes=[("JSON files", "*.json")],
+        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Выбрать JSON", "", "JSON files (*.json)"
         )
-        root.destroy()
         if file_name:
             self.load_json_file(Path(file_name))
 
@@ -186,8 +257,37 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         self.json_path = path
         self.jsonFileLineEdit.setText(path.name)
-        self.jsonDropAreaLabel.setText(f"Загружен JSON:\n{path.name}")
+        pretty = json.dumps(json.loads(text), ensure_ascii=False, indent=2)
+        self.jsonEditorWidget.setPlainText(pretty)
         self.append_log(f"JSON загружен: {path}")
+
+    def save_json_file(self) -> None:
+        text = self.jsonEditorWidget.toPlainText()
+        if not text.strip():
+            self.append_log("Нечего сохранять — редактор пуст")
+            return
+        try:
+            json.loads(text)
+        except Exception as exc:
+            self.append_log(f"Ошибка JSON: {exc}")
+            QtWidgets.QMessageBox.critical(self, "Ошибка JSON", str(exc))
+            return
+
+        if self.json_path is None:
+            file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self, "Сохранить JSON", "", "JSON files (*.json)"
+            )
+            if not file_name:
+                return
+            self.json_path = Path(file_name)
+            self.jsonFileLineEdit.setText(self.json_path.name)
+
+        try:
+            self.json_path.write_text(text, encoding="utf-8")
+            self.append_log(f"JSON сохранён: {self.json_path}")
+        except Exception as exc:
+            self.append_log(f"Ошибка сохранения: {exc}")
+            QtWidgets.QMessageBox.critical(self, "Ошибка сохранения", str(exc))
 
     def reload_json(self) -> None:
         if self.json_path is None:
@@ -196,33 +296,30 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_json_file(self.json_path)
 
     def validate_current_json_file(self) -> bool:
-        if self.json_path is None:
+        text = self.jsonEditorWidget.toPlainText()
+        if not text.strip():
             QtWidgets.QMessageBox.warning(self, "JSON", "JSON-файл не выбран")
             self.append_log("JSON-файл не выбран")
             return False
         try:
-            text = self.json_path.read_text(encoding="utf-8")
             json.loads(text)
         except Exception as exc:
             self.append_log(f"Ошибка JSON: {exc}")
             QtWidgets.QMessageBox.critical(self, "Ошибка JSON", str(exc))
             return False
-        self.append_log(f"JSON проверен: {self.json_path}")
+        if self.json_path:
+            self.append_log(f"JSON проверен: {self.json_path}")
         return True
 
     def open_json_in_editor(self) -> None:
         if self.json_path is None:
             self.append_log("JSON-файл не выбран")
             return
-
         path = str(self.json_path)
         try:
             if platform.system() == "Windows":
                 code_cmd = shutil.which("code")
-                if code_cmd:
-                    subprocess.Popen([code_cmd, path])
-                else:
-                    subprocess.Popen(["notepad.exe", path])
+                subprocess.Popen([code_cmd, path] if code_cmd else ["notepad.exe", path])
             elif platform.system() == "Darwin":
                 subprocess.Popen(["open", path])
             else:
