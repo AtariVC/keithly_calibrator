@@ -17,12 +17,8 @@ from matplotlib.figure import Figure
 from PyQt6 import QtCore, QtWidgets, uic
 from PyQt6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
 
-SCRIPT_DIR = Path(__file__).resolve().parents[1]
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
-
 from keithley2600 import Keithley2600
-from keithly_script import MeasureProcessing
+from core.measure import MeasureProcessing
 
 from qcustomwidgets.widgets.button import Button
 from qcustomwidgets.resources.compile_icons import svg_path

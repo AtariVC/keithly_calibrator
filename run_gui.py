@@ -8,10 +8,7 @@ import qtmodern.styles
 from qtmodern.windows import ModernWindow
 from PyQt6 import QtWidgets
 
-try:
-    from .main_window import MainWindow
-except ImportError:
-    from main_window import MainWindow
+from gui.main_window import MainWindow
 
 
 def main() -> int:

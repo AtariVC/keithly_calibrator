@@ -5,14 +5,9 @@ from loguru import logger
 from pymodbus.client import AsyncModbusSerialClient, AsyncModbusTcpClient
 from pymodbus.pdu import ModbusResponse
 
-try:
-    from .device_registers import DeviceProtocol, MPP_CMD_Payload, MPP_CMD_REG, MPP_REG
-    from .log_config import log_s
-    from .modbus_worker import ModbusWorker
-except Exception:
-    from src.device_registers import DeviceProtocol, MPP_CMD_Payload, MPP_CMD_REG, MPP_REG
-    from src.log_config import log_s
-    from src.modbus_worker import ModbusWorker
+from .device_registers import DeviceProtocol, MPP_CMD_Payload, MPP_CMD_REG, MPP_REG
+from .log_config import log_s
+from .modbus_worker import ModbusWorker
 
 
 P = ParamSpec("P")

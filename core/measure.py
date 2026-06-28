@@ -18,12 +18,9 @@ import numpy as np
 from keithley2600 import Keithley2600
 
 
-src_path = Path(__file__).resolve().parent.parent
-sys.path.append(str(src_path))
-
-from src.async_task_manager import AsyncTaskManager
-from src.cmd_interface import MPP_Commands
-from src.log_config import log_init
+from core.task_manager import AsyncTaskManager
+from core.cmd_interface import MPP_Commands
+from core.log_config import log_init
 
 
 class RealtimePlotter(Protocol):
@@ -463,7 +460,7 @@ class MeasureProcessing:
 if __name__ == "__main__":
     address = "10.6.1.229"
     logger = log_init()
-    json_conf = Path(__file__).with_name("mpp_drp_calib_ch1.json")
+    json_conf = Path(__file__).resolve().parents[1] / "configs" / "mpp_drp_calib_ch1.json"
 
     try:
         k: Keithley2600 | None = Keithley2600(f"TCPIP0::{address}::INSTR")  # type: ignore
