@@ -1,6 +1,6 @@
 {
     "mp1": {
-        "name": "Калибровка МПП-6 (ЛО28)",
+        "name": "Калибровка МПП-3 РП1 (ЛО29)",
         "calibrate_mode": true,
         "modbus_settings": {
             "id": 9,

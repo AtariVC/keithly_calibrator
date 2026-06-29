@@ -71,9 +71,9 @@ def log_init():
     logger.add(sys.stdout,level=emulator_level.name, format=log_format_emulator,
             colorize=True, backtrace=True, diagnose=True, filter=emulator_filter)
     # логирование в файл
-    logger.add(log_path_debug, level="DEBUG", format=log_format_debug, rotation="100 MB", enqueue=True, filter=debug_filter)
-    logger.add(log_path_debug, level="ERROR", format=log_format_debug, rotation="100 MB", enqueue=True, filter=error_filter)
-    logger.add(log_path_debug, level="INFO", format=log_format_debug, rotation="100 MB", enqueue=True, filter=error_filter)
+    # logger.add(log_path_debug, level="DEBUG", format=log_format_debug, rotation="100 MB", enqueue=True, filter=debug_filter)
+    # logger.add(log_path_debug, level="ERROR", format=log_format_debug, rotation="100 MB", enqueue=True, filter=error_filter)
+    # logger.add(log_path_debug, level="INFO", format=log_format_debug, rotation="100 MB", enqueue=True, filter=error_filter)
     # logger.add(log_path_serial, level=rx_level.name, format=log_format_rx, enqueue=True, filter=rx_filter)
     # logger.add(log_path_serial, level=tx_level.name, format=log_format_tx, enqueue=True, filter=tx_filter)
     # logger.add(log_path_emulator, level=emulator_level.name, format=log_format_emulator, enqueue=True, filter=emulator_filter)
