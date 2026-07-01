@@ -58,7 +58,7 @@ jobs:
           TAG=$(curl -fsSL https://api.github.com/repos/orhun/git-cliff/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
           VER=${TAG#v}
           curl -fsSL "https://github.com/orhun/git-cliff/releases/download/${TAG}/git-cliff-${VER}-x86_64-unknown-linux-musl.tar.gz" | tar -xz
-          sudo mv "git-cliff-${VER}-x86_64-unknown-linux-musl/git-cliff" /usr/local/bin/
+          sudo find . -name "git-cliff" -type f -exec mv {} /usr/local/bin/git-cliff \;
 
       - name: Generate changelog
         id: cliff
