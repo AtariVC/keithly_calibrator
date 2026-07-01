@@ -30,7 +30,10 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync
+        run: |
+          uv sync --no-install-package qcustomwidgets
+          uv pip install --no-deps qcustomwindow
+          uv pip install --no-deps "qcustomwidgets @ git+https://github.com/CrinitusFeles/QCustomWidgets.git"
 
       - name: Build executable
         run: uv run python to_exe.py
