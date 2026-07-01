@@ -14,7 +14,7 @@ from typing import Any
 import qasync
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PyQt6 import QtCore, QtWidgets, uic
+from PyQt6 import QtCore, QtGui, QtWidgets, uic
 from PyQt6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
 
 from keithley2600 import Keithley2600
@@ -75,6 +75,44 @@ class JsonHighlighter(QSyntaxHighlighter):
 
         for m in self._RE_PUNCT.finditer(text):
             self.setFormat(m.start(), 1, self._punct_fmt)
+
+
+class JsonEditor(QtWidgets.QPlainTextEdit):
+    """QPlainTextEdit that loads a dropped .json file instead of inserting its path."""
+
+    def __init__(self, on_json_drop: Callable[[Path], None] | None = None, parent=None) -> None:
+        super().__init__(parent)
+        self._on_json_drop = on_json_drop
+
+    def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
+        if self._first_json_path(event) is not None:
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event: QtGui.QDragMoveEvent) -> None:
+        if self._first_json_path(event) is not None:
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event: QtGui.QDropEvent) -> None:
+        path = self._first_json_path(event)
+        if path is not None and self._on_json_drop is not None:
+            self._on_json_drop(path)
+            event.acceptProposedAction()
+        else:
+            super().dropEvent(event)
+
+    def _first_json_path(self, event: QtGui.QDropEvent) -> Path | None:
+        mime = event.mimeData()
+        if not mime.hasUrls():
+            return None
+        for url in mime.urls():
+            p = Path(url.toLocalFile())
+            if p.suffix.lower() == ".json" and p.is_file():
+                return p
+        return None
 
 
 def style_axes(ax: Any, title: str | None = None, x_name: str = "Voltage, V", y_name: str = "Measured value") -> None:
@@ -170,6 +208,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.draw_idle()
 
     def _setup_json_panel(self) -> None:
+        # Replace the ui-loaded QPlainTextEdit with our drop-aware subclass
+        old = self.jsonEditorWidget
+        self.jsonEditorWidget = JsonEditor(on_json_drop=self.load_json_file)
+        self.jsonEditorWidget.setMinimumHeight(old.minimumHeight())
+        self.jsonEditorWidget.setSizePolicy(old.sizePolicy())
+        self.jsonEditorWidget.setPlaceholderText("Перетащите сюда .json файл с настройками")
+        self.rightPanelLayout.replaceWidget(old, self.jsonEditorWidget)
+        old.hide()
+        old.deleteLater()
+
         font = QFont("Menlo, Monaco, Courier New, monospace")
         font.setPointSize(11)
         self.jsonEditorWidget.setFont(font)
@@ -182,7 +230,6 @@ class MainWindow(QtWidgets.QMainWindow):
             "}"
         )
         self._highlighter = JsonHighlighter(self.jsonEditorWidget.document())
-        self.jsonEditorWidget.installEventFilter(self)
 
         layout: QtWidgets.QHBoxLayout = self.jsonFileRowLayout
 
@@ -205,32 +252,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.startStopButton.clicked.connect(self.on_start_stop_clicked)
         self.connectKeithleyButton.clicked.connect(self.connect_keithley_clicked)
 
-    def eventFilter(self, obj: QtCore.QObject, event: QtCore.QEvent) -> bool:
-        if obj is self.jsonEditorWidget:
-            if event.type() == QtCore.QEvent.Type.DragEnter:
-                if self._event_has_json_file(event):
-                    event.acceptProposedAction()
-                    return True
-            if event.type() == QtCore.QEvent.Type.Drop:
-                path = self._json_path_from_drop_event(event)
-                if path is not None:
-                    self.load_json_file(path)
-                    event.acceptProposedAction()
-                    return True
-        return super().eventFilter(obj, event)
-
-    def _event_has_json_file(self, event: QtCore.QEvent) -> bool:
-        return self._json_path_from_drop_event(event) is not None
-
-    def _json_path_from_drop_event(self, event: QtCore.QEvent) -> Path | None:
-        mime_data = event.mimeData()
-        if not mime_data.hasUrls():
-            return None
-        for url in mime_data.urls():
-            path = Path(url.toLocalFile())
-            if path.suffix.lower() == ".json" and path.is_file():
-                return path
-        return None
 
     def append_log(self, message: str) -> None:
         ts = datetime.now().strftime("%H:%M:%S")
