@@ -178,11 +178,13 @@ class MeasureProcessing:
         mb_client: AsyncModbusSerialClient | None = None,
         plotter_factory: Callable[[str, str, str], RealtimePlotter] | None = None,
         on_warning: Callable[[str], None] | None = None,
+        on_progress: Callable[[int, int], None] | None = None,
     ) -> None:
         self.k = k
         self.mb_client = mb_client
         self.plotter_factory = plotter_factory
         self.on_warning = on_warning
+        self.on_progress = on_progress
         self.mp_model: Dict[str, MPModel] = {}
         self.task_manager = AsyncTaskManager()
         self._active_modbus_fp: tuple[str, int, float] | None = None
@@ -281,12 +283,16 @@ class MeasureProcessing:
         cycle = 0
         measured_x: list[float] = []
         measured_y: list[float] = []
+        total_steps = self._count_setpoints(process.measure_settings)
+        if self.on_progress and total_steps > 0:
+            self.on_progress(0, total_steps)
 
         try:
             with csv_path.open("w", newline="", encoding="utf-8") as csv_file:
                 writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
                 writer.writeheader()
                 while True:
+                    cycle_step = 0
                     for voltage, delay_s in self._iter_setpoints(process.measure_settings):
                         if process.calibrate_mode:
                             value = await self._measure_calibration_point(
@@ -315,6 +321,9 @@ class MeasureProcessing:
                         if show_calibration_fit:
                             await plotter.update_calibration_fit(a, b)
                         step_idx += 1
+                        cycle_step += 1
+                        if self.on_progress and total_steps > 0:
+                            self.on_progress(cycle_step, total_steps)
 
                     cycle += 1
                     if not process.loop:
@@ -428,6 +437,15 @@ class MeasureProcessing:
 
         await asyncio.to_thread(_set)
         logger.debug(f"Keithley level set: {voltage:.6f} V")
+
+    def _count_setpoints(self, measure_settings: MeasureSettings) -> int:
+        if measure_settings.convince_mode is not None:
+            return len(measure_settings.convince_mode.vg_lst)
+        if measure_settings.linspace_mode is not None:
+            return max(1, int(measure_settings.linspace_mode.vg_step))
+        if measure_settings.const_mode is not None:
+            return 1
+        return 0
 
     def _iter_setpoints(self, measure_settings: MeasureSettings) -> Iterator[tuple[float, float]]:
         if measure_settings.convince_mode is not None:

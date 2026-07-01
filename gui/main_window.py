@@ -19,6 +19,7 @@ from PyQt6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
 
 from keithley2600 import Keithley2600
 from core.measure import MeasureProcessing
+from core.custom.led_widgets import widget_led_off, widget_led_on, widget_led_red
 
 from qcustomwidgets.widgets.button import Button
 from qcustomwidgets.resources.compile_icons import svg_path
@@ -189,6 +190,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.measure_task: asyncio.Task[None] | None = None
 
         self.keithleyIpLineEdit.setText(DEFAULT_KEITHLEY_ADDRESS)
+        self.keithleyLedWidget.setStyleSheet(widget_led_off())
         self.horizontalLayout.setStretch(0, 3)
         self.horizontalLayout.setStretch(1, 2)
         self.rightPanelLayout.setStretch(1, 1)  # jsonEditorWidget expands
@@ -241,7 +243,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.selectJsonButton = _btn("folder-open.svg", "Выбрать JSON")
         self.saveJsonButton = _btn("save.svg", "Сохранить JSON")
-        self.editJsonButton = _btn("editor.svg", "Открыть в редакторе")
+        self.editJsonButton = _btn("edit.svg", "Открыть в редакторе")
         self.reloadJsonButton = _btn("repeat.svg", "Перезагрузить JSON")
 
     def _setup_signals(self) -> None:
@@ -290,18 +292,37 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.critical(self, "Ошибка JSON", str(exc))
             return
 
-        if self.json_path is None:
-            file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
-                self, "Сохранить JSON", "", "JSON files (*.json)"
-            )
-            if not file_name:
-                return
-            self.json_path = Path(file_name)
-            self.jsonFileLineEdit.setText(self.json_path.name)
+        typed_name = self.jsonFileLineEdit.text().strip()
+        if typed_name and not typed_name.lower().endswith(".json"):
+            typed_name += ".json"
+
+        if typed_name:
+            if self.json_path is not None:
+                target = self.json_path.parent / typed_name
+            else:
+                default = typed_name
+                file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
+                    self, "Сохранить JSON", default, "JSON files (*.json)"
+                )
+                if not file_name:
+                    return
+                target = Path(file_name)
+        else:
+            if self.json_path is None:
+                file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
+                    self, "Сохранить JSON", "", "JSON files (*.json)"
+                )
+                if not file_name:
+                    return
+                target = Path(file_name)
+            else:
+                target = self.json_path
 
         try:
-            self.json_path.write_text(text, encoding="utf-8")
-            self.append_log(f"JSON сохранён: {self.json_path}")
+            target.write_text(text, encoding="utf-8")
+            self.json_path = target
+            self.jsonFileLineEdit.setText(target.name)
+            self.append_log(f"JSON сохранён: {target}")
         except Exception as exc:
             self.append_log(f"Ошибка сохранения: {exc}")
             QtWidgets.QMessageBox.critical(self, "Ошибка сохранения", str(exc))
@@ -360,12 +381,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.keithleyStatusLabel.setText("Подключение...")
         self.append_log(f"Подключение Keithley: {ip_address}")
         try:
-            self.keithley = await asyncio.to_thread(
+            keithley = await asyncio.to_thread(
                 Keithley2600,
                 f"TCPIP0::{ip_address}::INSTR",
             )
+            if not keithley.connected or keithley.connection is None:
+                raise ConnectionError(f"Не удалось открыть VISA-ресурс: {ip_address}")
+            await asyncio.to_thread(
+                keithley.connection.query,
+                "print(localnode.serialno)",
+            )
+            self.keithley = keithley
         except Exception as exc:
             self.keithley = None
+            self.keithleyLedWidget.setStyleSheet(widget_led_red())
             self.keithleyStatusLabel.setText("Ошибка подключения")
             self.append_log(f"Ошибка подключения Keithley: {exc}")
             QtWidgets.QMessageBox.critical(self, "Ошибка подключения Keithley", str(exc))
@@ -373,6 +402,7 @@ class MainWindow(QtWidgets.QMainWindow):
         finally:
             self.connectKeithleyButton.setEnabled(True)
 
+        self.keithleyLedWidget.setStyleSheet(widget_led_on())
         self.keithleyStatusLabel.setText("Подключен")
         self.connectKeithleyButton.setText("Переподключить")
         self.append_log(f"Keithley подключен: {ip_address}")
@@ -394,10 +424,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.json_path is None:
             return
 
+        self.progressBar.setValue(0)
         self.measure_processing = MeasureProcessing(
             self.keithley,
             plotter_factory=lambda title, x_name, y_name: GuiRealtimePlotter(self, title, x_name, y_name),
             on_warning=lambda msg: self.append_log(f"[ПРЕДУПРЕЖДЕНИЕ] {msg}"),
+            on_progress=self._on_measure_progress,
         )
         self.measure_processing.load_config(self.json_path)
         if not self.measure_processing.mp_model:
@@ -422,7 +454,12 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.critical(self, "Ошибка измерения", str(exc))
         finally:
             self.startStopButton.setText("Запустить")
+            self.progressBar.setValue(0)
             self.measure_task = None
+
+    def _on_measure_progress(self, current: int, total: int) -> None:
+        self.progressBar.setRange(0, total)
+        self.progressBar.setValue(current)
 
     async def stop_measurement(self) -> None:
         task = self.measure_task
