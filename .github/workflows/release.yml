@@ -14,9 +14,14 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact: keithly-calibrator.exe
+            artifact_name: keithly-calibrator.exe
+            artifact_upload: keithly-calibrator-win32.exe
           - os: macos-latest
-            artifact: keithly-calibrator
+            artifact_name: keithly-calibrator
+            artifact_upload: keithly-calibrator-macos
+          - os: ubuntu-latest
+            artifact_name: keithly-calibrator
+            artifact_upload: keithly-calibrator-linux
 
     runs-on: ${{ matrix.os }}
 
@@ -41,8 +46,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: dist/${{ matrix.artifact }}
+          name: ${{ matrix.artifact_upload }}
+          path: dist/${{ matrix.artifact_name }}
 
   release:
     needs: build
@@ -80,5 +85,6 @@ jobs:
         with:
           body: ${{ steps.cliff.outputs.content }}
           files: |
-            dist/keithly-calibrator.exe/keithly-calibrator.exe
-            dist/keithly-calibrator/keithly-calibrator
+            dist/keithly-calibrator-win32.exe/keithly-calibrator.exe
+            dist/keithly-calibrator-macos/keithly-calibrator
+            dist/keithly-calibrator-linux/keithly-calibrator
