@@ -24,3 +24,4 @@ dependencies = [
 
 [tool.uv]
 constraint-dependencies = ["pywin32; sys_platform == 'win32'"]
+override-dependencies = ["pywin32; sys_platform == 'win32'"]

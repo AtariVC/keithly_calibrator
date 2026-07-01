@@ -12,6 +12,7 @@ resolution-markers = [
 
 [manifest]
 constraints = [{ name = "pywin32", marker = "sys_platform == 'win32'" }]
+overrides = [{ name = "pywin32", marker = "sys_platform == 'win32'" }]
 
 [[package]]
 name = "altgraph"
@@ -1017,7 +1018,7 @@ name = "qcustomwindow"
 version = "0.3.3"
 source = { git = "https://github.com/CrinitusFeles/QCustomWindow#960dad0a25fbe71eb5f9792f53e338427ef3683f" }
 dependencies = [
-    { name = "pywin32" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "typing-extensions" },
 ]
 
