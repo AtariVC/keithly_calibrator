@@ -1,6 +1,6 @@
 {
     "mp1": {
-        "name": "Калибровка (список напряжений)",
+        "name": "Калибровка с опросом по Modbus",
         "calibrate_mode": true,
         "modbus_settings": {
             "id": 14,

@@ -1,6 +1,6 @@
 {
     "mp1": {
-        "name": "Калибровка (linspace)",
+        "name": "Калибровка (linspace) с опросом по Modbus",
         "calibrate_mode": true,
         "modbus_settings": {
             "id": 14,

@@ -1,6 +1,6 @@
 {
     "mp1": {
-        "name": "ВАХ без калибровки",
+        "name": "ВАХ",
         "calibrate_mode": false,
         "measure_settings": {
             "linspace_mode": {
