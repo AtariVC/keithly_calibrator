@@ -1,0 +1,25 @@
+{
+  "mp1": {
+    "name": "Калибровка МПП-5 (ЛО29)",
+    "calibrate_mode": true,
+    "modbus_settings": {
+      "id": 8,
+      "bodrate": 125000,
+      "com": "COM3"
+    },
+    "measure_settings": {
+      "acq_channel_reg": 111,
+      "linspace_mode": {
+        "vg_start": -10,
+        "vg_stop": 139,
+        "vg_step": 20,
+        "step_delay_s": 5
+      }
+    },
+    "current_limit": 0.01,
+    "loop": false,
+    "save_table": true,
+    "save_plot": true,
+    "show_calibration_fit": true
+  }
+}
