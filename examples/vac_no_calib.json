@@ -1,0 +1,18 @@
+{
+    "mp1": {
+        "name": "ВАХ без калибровки",
+        "calibrate_mode": false,
+        "measure_settings": {
+            "linspace_mode": {
+                "vg_start": 0.0,
+                "vg_stop": 5.0,
+                "vg_step": 50,
+                "step_delay_s": 0.1
+            }
+        },
+        "current_limit": 0.1,
+        "loop": false,
+        "save_table": true,
+        "save_plot": true
+    }
+}

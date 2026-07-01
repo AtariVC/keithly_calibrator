@@ -1,0 +1,16 @@
+{
+    "mp1": {
+        "name": "Мониторинг (loop)",
+        "calibrate_mode": false,
+        "measure_settings": {
+            "convince_mode": {
+                "vg_lst": [1.0, 2.0, 3.0],
+                "step_delay_s": 1.0
+            }
+        },
+        "current_limit": 0.01,
+        "loop": true,
+        "save_table": true,
+        "save_plot": false
+    }
+}

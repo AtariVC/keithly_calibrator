@@ -1,0 +1,23 @@
+{
+    "mp1": {
+        "name": "Калибровка (список напряжений)",
+        "calibrate_mode": true,
+        "modbus_settings": {
+            "id": 14,
+            "bodrate": 125000,
+            "com": "COM5"
+        },
+        "measure_settings": {
+            "acq_channel_reg": 7,
+            "convince_mode": {
+                "vg_lst": [0.0, 0.5, 1.0, 1.5, 2.0, 2.5],
+                "step_delay_s": 0.5
+            }
+        },
+        "current_limit": 0.01,
+        "loop": false,
+        "save_table": true,
+        "save_plot": true,
+        "show_calibration_fit": true
+    }
+}
