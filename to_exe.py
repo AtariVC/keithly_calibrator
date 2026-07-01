@@ -1,4 +1,5 @@
 """Build script: python to_exe.py"""
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -45,6 +46,10 @@ def main() -> None:
     result = subprocess.run(cmd, cwd=ROOT)
     if result.returncode != 0:
         sys.exit(result.returncode)
+
+    if BUILD.exists():
+        shutil.rmtree(BUILD)
+        print(f"Removed build dir: {BUILD}")
 
     exe = DIST / ("keithly-calibrator.exe" if sys.platform == "win32" else "keithly-calibrator")
     if exe.exists():
