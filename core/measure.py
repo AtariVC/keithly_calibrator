@@ -170,19 +170,36 @@ class MatplotlibRealtimePlot:
 
 
 class MeasureProcessing:
+    _MODBUS_ERR = b"-1"  # sentinel returned by mb_decorator on any exception
+
     def __init__(
         self,
         k: Keithley2600 | None = None,
         mb_client: AsyncModbusSerialClient | None = None,
         plotter_factory: Callable[[str, str, str], RealtimePlotter] | None = None,
+        on_warning: Callable[[str], None] | None = None,
     ) -> None:
         self.k = k
         self.mb_client = mb_client
         self.plotter_factory = plotter_factory
+        self.on_warning = on_warning
         self.mp_model: Dict[str, MPModel] = {}
         self.task_manager = AsyncTaskManager()
         self._active_modbus_fp: tuple[str, int, float] | None = None
         self.output_dir: Path = Path("measure")
+
+    def _warn(self, msg: str) -> None:
+        logger.warning(msg)
+        if self.on_warning:
+            self.on_warning(msg)
+
+    async def _keithley_shutdown(self) -> None:
+        """Set voltage to 0 and disable output. Called on fatal Modbus errors."""
+        try:
+            await self._keithley_set_voltage(0.0)
+        except Exception as exc:
+            logger.warning(f"Не удалось выставить 0 В перед отключением: {exc}")
+        await self._safe_keithley_output_off()
 
     def load_config(self, json_conf: str | Path) -> None:
         try:
@@ -195,6 +212,13 @@ class MeasureProcessing:
             self.mp_model = MPModel.pydentic_model_init(raw)
         except Exception as exc:
             logger.error(exc)
+            return
+        for proc_key, process in self.mp_model.items():
+            if process.calibrate_mode and process.modbus_settings is None:
+                self._warn(
+                    f"[{proc_key}] calibrate_mode включён, но modbus_settings не заданы — "
+                    "Modbus-калибровка недоступна"
+                )
 
     async def run_process(self) -> None:
         if not self.mp_model:
@@ -226,6 +250,18 @@ class MeasureProcessing:
 
     async def _run_single_process(self, proc_key: str, process: MPModel) -> None:
         await self._prepare_keithley_source(current_limit=process.current_limit)
+
+        # Pre-flight Modbus check — warn only, does not stop the measurement
+        if process.calibrate_mode and process.modbus_settings is not None:
+            ok = await self.connect_modbus(process.modbus_settings)
+            if not ok:
+                self._warn(
+                    f"[{proc_key}] Нет ответа по Modbus "
+                    f"({process.modbus_settings.com}, "
+                    f"baudrate={process.modbus_settings.bodrate}) — "
+                    "устройство не обнаружено"
+                )
+
         plotter_factory = self.plotter_factory or MatplotlibRealtimePlot
         plotter = plotter_factory(f"{proc_key}: {process.name}", process.x_name, process.y_name)
         safe_name = self._sanitize_filename(process.name)
@@ -300,29 +336,53 @@ class MeasureProcessing:
         delay_s: float,
     ) -> float:
         if process.modbus_settings is None:
-            raise RuntimeError("modbus_settings is required in calibrate_mode")
+            await self._keithley_shutdown()
+            raise RuntimeError(
+                "calibrate_mode включён, но modbus_settings не заданы. "
+                "Напряжение сброшено, выход отключён."
+            )
 
         connected = await self.connect_modbus(process.modbus_settings)
-        if not connected or self.mb_client is None:
-            raise RuntimeError("Modbus client is not connected")
+        if not connected:
+            await self._keithley_shutdown()
+            raise RuntimeError(
+                f"Нет ответа по Modbus ({process.modbus_settings.com}) "
+                "во время опроса. Напряжение сброшено, выход отключён."
+            )
 
         mpp_cmd = MPP_Commands(self.mb_client, logger, process.modbus_settings.id)
         ACQ_reg = int(process.measure_settings.acq_channel_reg)
 
-        await mpp_cmd.start_measure_forced(ch = 1)
-        await mpp_cmd.start_measure_forced(ch = 2)
+        await mpp_cmd.start_measure_forced(ch=1)
+        await mpp_cmd.start_measure_forced(ch=2)
         await self._keithley_set_voltage(voltage)
         if delay_s > 0:
             await asyncio.sleep(delay_s)
 
-        raw = (
-            await mpp_cmd.get_acq_peak(ACQ_reg)
-        )
-        out_data = self._extract_u16_value(raw)
+        raw = await mpp_cmd.get_acq_peak(ACQ_reg)
+        if raw == self._MODBUS_ERR or not raw:
+            await self._keithley_shutdown()
+            raise RuntimeError(
+                f"Нет ответа по Modbus при чтении ACQ (reg={ACQ_reg:#06x}, "
+                f"V={voltage:.3f} В). Напряжение сброшено, выход отключён."
+            )
+
+        try:
+            out_data = self._extract_u16_value(raw)
+        except RuntimeError as exc:
+            await self._keithley_shutdown()
+            raise RuntimeError(
+                f"Ошибка разбора ответа Modbus при V={voltage:.3f} В: {exc}. "
+                "Напряжение сброшено, выход отключён."
+            ) from exc
+
         if out_data >= 4094:
-            await self._keithley_set_voltage(0)
-            raise ValueError(f"The calibration range has been exceeded at {voltage:.3f} V: {out_data:.0f} lsb >= 4094 lsb")
-        return self._extract_u16_value(raw)
+            await self._keithley_set_voltage(0.0)
+            raise ValueError(
+                f"Превышен диапазон калибровки при {voltage:.3f} В: "
+                f"{out_data:.0f} lsb >= 4094 lsb"
+            )
+        return out_data
 
     async def _measure_keithley_current_point(self, voltage: float, delay_s: float) -> float:
         await self._keithley_set_voltage(voltage)

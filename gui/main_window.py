@@ -376,6 +376,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.measure_processing = MeasureProcessing(
             self.keithley,
             plotter_factory=lambda title, x_name, y_name: GuiRealtimePlotter(self, title, x_name, y_name),
+            on_warning=lambda msg: self.append_log(f"[ПРЕДУПРЕЖДЕНИЕ] {msg}"),
         )
         self.measure_processing.load_config(self.json_path)
         if not self.measure_processing.mp_model:
